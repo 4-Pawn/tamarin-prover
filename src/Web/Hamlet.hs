@@ -48,6 +48,7 @@ import           Data.Version          (showVersion)
 -- import           System.Locale
 
 import           Paths_tamarin_prover  (version)
+import           System.FilePath 
 
 --
 -- Templates
@@ -191,6 +192,7 @@ headerTpl info = [whamlet|
     <div #header-links>
       <a class=plain-link href=@{RootR}>Index</a>
       <a class=plain-link href=@{DownloadTheoryR idx filename}>Download</a>
+      <a class=save-link  href=@{AppendNewLemmasR idx filename}>Append modified Lemmas to file</a>
       <ul #navigation>
         <li><a href="#">Actions</a>
           <ul>
@@ -203,8 +205,6 @@ headerTpl info = [whamlet|
             <li><a id=lvl1-toggle href="#">Graph simplification L1</a>
             <li><a id=lvl2-toggle href="#">Graph simplification L2</a>
             <li><a id=lvl3-toggle href="#">Graph simplification L3</a>
-            
-            
   |]
   where
             -- <li><a id=debug-toggle href="#">Debug pane</a>
@@ -213,9 +213,9 @@ headerTpl info = [whamlet|
             -- <li><a class=edit-link href=@{EditPathR idx (TheoryLemma "")}>Add lemma</a>
             --
     idx = tiIndex info
-    filename = get thyName (tiTheory info) ++ ".spthy"
+    filename = get thyName (tiTheory info) ++ ".spthy" 
 
-    {- use this snipped to reactivate saving local theories
+      {- use this snipped to reactivate saving local theories
     localTheory (Local _) = True
     localTheory _         = False
 
@@ -286,12 +286,14 @@ proofStateDiffTpl renderUrl ti = do
 
 -- | Framing/UI-layout template (based on JavaScript/JQuery)
 overviewTpl :: RenderUrl
+            -> RenderUrl
             -> TheoryInfo -- ^ Theory information
             -> TheoryPath -- ^ Theory path to load into main
+            -> String     -- ^ The lemma plaintext for editing
             -> IO Widget
-overviewTpl renderUrl info path = do
+overviewTpl renderUrl renderImgUrl info path lptxt = do
   proofState <- proofStateTpl renderUrl info
-  mainView <- pathTpl renderUrl info path
+  mainView <- pathTpl renderUrl renderImgUrl info path lptxt
   return [whamlet|
     $newline never
     <div .ui-layout-north>
@@ -343,13 +345,15 @@ overviewDiffTpl renderUrl info path = do
   
 -- | Theory path, displayed when loading main screen for first time.
 pathTpl :: RenderUrl
-        -> TheoryInfo   -- ^ The theory
-        -> TheoryPath   -- ^ Path to display on load
+        -> RenderUrl      -- ^ URL renderer that includes GET parameters for the image.
+        -> TheoryInfo     -- ^ The theory
+        -> TheoryPath     -- ^ Path to display on load
+        -> String         -- ^ plaintext of lemma for editing
         -> IO Widget
-pathTpl renderUrl info path =
+pathTpl renderUrl renderImgUrl info path lptxt =
     return $ [whamlet|
                 $newline never
-                #{htmlThyPath renderUrl info path} |]
+                #{htmlThyPath renderUrl renderImgUrl info path lptxt} |]
 
 -- | Theory path, displayed when loading main screen for first time.
 pathDiffTpl :: RenderUrl

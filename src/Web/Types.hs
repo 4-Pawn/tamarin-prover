@@ -78,6 +78,8 @@ import           Theory
 import Control.Monad.Except (ExceptT)
 import Main.TheoryLoader
 import Theory.Tools.Wellformedness (WfErrorReport)
+import Data.Tree (flatten)
+import Debug.Trace (trace, traceM)
 
 
 ------------------------------------------------------------------------------
@@ -335,6 +337,9 @@ data TheoryPath
   | TheoryRules                         -- ^ Theory rules
   | TheoryMessage                       -- ^ Theory message deduction
   | TheoryTactic                        -- ^ Theory tactic
+  | TheoryEdit  String                  -- ^ edit lemma at runtime
+  | TheoryDelete String                 -- ^ remove lemma at runtime 
+  | TheoryAdd String                    -- ^ add new lemma at index at runtime
   deriving (Eq, Show, Read)
 
 -- | Simple data type for specifying a path to a specific
@@ -369,6 +374,9 @@ renderTheoryPath =
     go (TheoryProof lemma path) = "proof" : lemma : path
     go (TheoryMethod lemma path idx) = "method" : lemma : show idx : path
     go TheoryTactic = ["tactic"]
+    go (TheoryEdit name) = ["edit", name]
+    go (TheoryAdd name) = ["add", name]
+    go (TheoryDelete name) = ["delete", name]
 
 -- | Render a theory path to a list of strings. Note that we prefix an
 -- underscore to the empty string and strings starting with an underscore.
@@ -423,9 +431,15 @@ parseTheoryPath =
       "cases"   -> parseCases xs
       "proof"   -> parseProof xs
       "method"  -> parseMethod xs
+      "edit"    -> TheoryEdit <$> listToMaybe xs
+      "add"     -> TheoryAdd <$> listToMaybe xs
+      "delete"  -> TheoryDelete <$> listToMaybe xs
       _         -> Nothing
 
     safeRead = listToMaybe . map fst . reads
+    
+    -- parseAdd (y:_) = TheoryAdd <$> safeRead y
+    -- parseAdd _ = Nothing
 
     parseLemma ys = TheoryLemma <$> listToMaybe ys
 
@@ -556,6 +570,8 @@ type RenderUrl = Route (WebUI) -> T.Text
 -- and the ones ending in DR are for the debug view.
 mkYesodData "WebUI" [parseRoutes|
 /                                          RootR                   GET POST
+/thy/trace/#Int/edit/*TheoryPath           TheoryEditR             POST
+/thy/trace/#Int/verify/*TheoryPath         TheoryVerifyR           GET
 /thy/trace/#Int/overview/*TheoryPath          OverviewR               GET
 /thy/trace/#Int/source                           TheorySourceR           GET
 /thy/trace/#Int/message                          TheoryMessageDeductionR GET
@@ -568,6 +584,7 @@ mkYesodData "WebUI" [parseRoutes|
 /thy/trace/#Int/prev/#String/*TheoryPath      PrevTheoryPathR         GET
 -- /thy/trace/#Int/save                             SaveTheoryR             GET
 /thy/trace/#Int/download/#String                 DownloadTheoryR         GET
+/thy/trace/#Int/get_and_append/#String           AppendNewLemmasR         GET
 -- /thy/trace/#Int/edit/source                      EditTheoryR             GET POST
 -- /thy/trace/#Int/edit/path/*TheoryPath         EditPathR               GET POST
 /thy/trace/#Int/del/path/*TheoryPath          DeleteStepR             GET
