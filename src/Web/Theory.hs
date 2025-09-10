@@ -918,36 +918,37 @@ rulesSnippet thy = vcat
                         | bb <- behaviours ]
 
     renderRule idx rule =
-      let ruleId   = "rule-" ++ show idx
-          formId   = "edit-form-" ++ ruleId
-          ruleText = show rule -- or your own renderRuleAsText
-      in vsep
-         [ prettyRuleAC rule
-         , withTag "button"
-             [ ("onclick", "toggleForm('" ++ formId ++ "')")
-             , ("type", "button")
-             ]
-             (text "Edit Rule")
-         , withTag "div"
-             [ ("id", formId)
-             , ("style", "display:none; margin-top:10px;")
-             ]
-             (withTag "form"
+        let ruleId   = "rule-" ++ show idx
+            formId   = "edit-form-" ++ ruleId
+            ruleText = "add new action fact(s) here, separated by a comma"
+         in withTag "div"
+             [ ("style", "margin-bottom: -10px;") ]
+             (prettyRuleAC rule <> withTag "br" [] mempty <> 
+              withTag "button"
+              [ ("onclick", "toggleForm('" ++ formId ++ "')")
+              , ("type", "button")
+              ]
+              (text "add action fact") <>
+              withTag "div"
+              [ ("id", formId)
+              , ("style", "display:none; margin-top: 10px;") ]
+              (withTag "form"
                [ ("method", "post")
                , ("action", "/edit/rule/" ++ ruleId)
                ]
-               (vsep
-                 [ withTag "textarea"
-                     [ ("name", "rule-text")
-                     , ("rows", "1")
-                     , ("style", "width: 100%; font-family: monospace;")
-                     ]
-                     (text ruleText)
-                 , withTag "button"
-                     [ ("type", "submit") ]
-                     (text "Submit")
-                 ]))
-         ]
+               (withTag "textarea"
+                [ ("name", "action-fact")
+                , ("rows", "3")
+                , ("placeholder", ruleText)
+                , ("style", "width: 50%; font-family: monospace; margin: 0;" )
+                ]
+                mempty <>
+                withTag "button"
+                [ ("type", "submit")
+                , ("style", "margin-top: 5px;" )
+                ]
+                (text "Submit"))))
+
 
     ppWithHeader header body =
         caseEmptyDoc

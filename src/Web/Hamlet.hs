@@ -268,7 +268,7 @@ proofStateDiffTpl renderUrl ti = do
          $newline never
          #{preEscapedToMarkup res} |]
 
-
+-- | For the action facts toggle  
 toggleScriptTpl = [julius|
   function toggleForm(id) {
     var el = document.getElementById(id);
