@@ -858,33 +858,105 @@ reqCasesDiffSnippet :: HtmlDocument d => RenderUrl -> TheoryIdx -> Side -> Sourc
 reqCasesDiffSnippet renderUrl tidx s kind isdiff thy = vcat $
     htmlSourceDiff renderUrl tidx s kind isdiff <$> zip [1..] (getDiffSource s isdiff kind thy)
 
+-- -- | Build the Html document showing the rules of the theory.
+-- rulesSnippet :: HtmlDocument d => ClosedTheory -> d
+-- rulesSnippet thy = vcat
+--     [ if null (theoryMacros thy) then text empty
+--                                 else ppWithHeader "Macros" $
+--         (prettyMacros $ theoryMacros thy)
+--     , ppWithHeader "Fact Symbols with Injective Instances" $
+--         (if null injFacts then text "None" else fsepList (text . showInjFact) injFacts)
+--     , ppWithHeader "Multiset Rewriting Rules" $
+--         (if null (theoryMacros thy) then text empty else text "(Shown with macros application)") 
+--
+--         <-> (vsep $ map (\rule -> vsep [prettyRuleAC rule, text "Edit rule"]) msrRules)
+--     , ppWithHeader "Restrictions of the Set of Traces" $
+--         vsep $ map prettyRestriction $ theoryRestrictions thy
+--     ]
+--   where
+--     msrRules   = (getClassifiedRules thy)._crProtocol
+--     injFacts   = S.toList $ getInjectiveFactInsts thy
+--     showInjFact (tag, behaviours) = showFactTag tag ++ "(" ++ intercalate "," ("id":positions) ++ ")"
+--       where positions = [case bb of
+--                           [b] -> show b
+--                           _   -> "(" ++ intercalate "," (map show bb) ++ ")"
+--                         | bb <- behaviours ]
+--     ppWithHeader header body =
+--         caseEmptyDoc
+--             emptyDoc
+--             ( withTag "h2" []                            (text header) $$
+--               withTag "p"  [("class","monospace rules")] body             )
+--             body
+
+
 -- | Build the Html document showing the rules of the theory.
 rulesSnippet :: HtmlDocument d => ClosedTheory -> d
 rulesSnippet thy = vcat
     [ if null (theoryMacros thy) then text empty
-                                else ppWithHeader "Macros" $
+                                 else ppWithHeader "Macros" $
         (prettyMacros $ theoryMacros thy)
+
     , ppWithHeader "Fact Symbols with Injective Instances" $
         (if null injFacts then text "None" else fsepList (text . showInjFact) injFacts)
+
     , ppWithHeader "Multiset Rewriting Rules" $
-        (if null (theoryMacros thy) then text empty else text "(Shown with macros application)") <-> (vsep $ map prettyRuleAC msrRules)
+        (if null (theoryMacros thy) then text empty else text "(Shown with macros application)")
+        <->
+        (vsep $ zipWith renderRule [0..] msrRules)
+
     , ppWithHeader "Restrictions of the Set of Traces" $
         vsep $ map prettyRestriction $ theoryRestrictions thy
     ]
   where
     msrRules   = (getClassifiedRules thy)._crProtocol
     injFacts   = S.toList $ getInjectiveFactInsts thy
+
     showInjFact (tag, behaviours) = showFactTag tag ++ "(" ++ intercalate "," ("id":positions) ++ ")"
       where positions = [case bb of
                           [b] -> show b
                           _   -> "(" ++ intercalate "," (map show bb) ++ ")"
                         | bb <- behaviours ]
+
+    renderRule idx rule =
+      let ruleId   = "rule-" ++ show idx
+          formId   = "edit-form-" ++ ruleId
+          ruleText = show rule -- or your own renderRuleAsText
+      in vsep
+         [ prettyRuleAC rule
+         , withTag "button"
+             [ ("onclick", "toggleForm('" ++ formId ++ "')")
+             , ("type", "button")
+             ]
+             (text "Edit Rule")
+         , withTag "div"
+             [ ("id", formId)
+             , ("style", "display:none; margin-top:10px;")
+             ]
+             (withTag "form"
+               [ ("method", "post")
+               , ("action", "/edit/rule/" ++ ruleId)
+               ]
+               (vsep
+                 [ withTag "textarea"
+                     [ ("name", "rule-text")
+                     , ("rows", "1")
+                     , ("style", "width: 100%; font-family: monospace;")
+                     ]
+                     (text ruleText)
+                 , withTag "button"
+                     [ ("type", "submit") ]
+                     (text "Submit")
+                 ]))
+         ]
+
     ppWithHeader header body =
         caseEmptyDoc
             emptyDoc
             ( withTag "h2" []                            (text header) $$
               withTag "p"  [("class","monospace rules")] body             )
             body
+
+
 
 -- | Build the Html document showing the message theory.
 messageSnippet :: HtmlDocument d => ClosedTheory -> d
@@ -976,7 +1048,7 @@ htmlThyPath :: RenderUrl      -- ^ The function for rendering Urls.
 htmlThyPath renderUrl renderImgUrl info path lPlaintext = case path of
   TheoryMethod{}        -> pp $ text "Cannot display theory method."
 
-  TheoryRules           -> pp $ rulesSnippet thy
+  TheoryRules           -> pp $ rulesSnippet thy --(linkToPath renderUrl lemmaEdit ["edit"] $ text "edit lemma")
   TheoryMessage         -> pp $ messageSnippet thy
   TheoryTactic          -> pp $ tacticSnippet thy
   TheorySource kind _ _ -> pp $ reqCasesSnippet renderUrl tidx kind thy

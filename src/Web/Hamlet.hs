@@ -268,6 +268,19 @@ proofStateDiffTpl renderUrl ti = do
          $newline never
          #{preEscapedToMarkup res} |]
 
+
+toggleScriptTpl = [julius|
+  function toggleForm(id) {
+    var el = document.getElementById(id);
+    if (el.style.display === "none") {
+      el.style.display = "block";
+    } else {
+      el.style.display = "none";
+    }
+  }
+|]
+
+
 -- | Framing/UI-layout template (based on JavaScript/JQuery)
 overviewTpl :: RenderUrl
             -> RenderUrl -- ^ URL renderer that includes GET parameters for the image.
@@ -296,7 +309,36 @@ overviewTpl renderUrl renderImgUrl info path lptxt = do
       <div #main-wrapper .scroll-wrapper tabindex=0>
         <div #ui-main-display>
           \^{mainView}
+    <script>
+      ^{toggleScriptTpl}
   |]
+
+-- overviewTpl renderUrl renderImgUrl info path lptxt = do
+--   proofState <- proofStateTpl renderUrl info
+--   mainView <- pathTpl renderUrl renderImgUrl info path lptxt
+--   pure [whamlet|
+--     $newline never
+--     <div .ui-layout-north>
+--       ^{headerTpl info}
+--     <div .ui-layout-west>
+--       <h1 .pane-head>Proof scripts
+--       <div #proof-wrapper .scroll-wrapper>
+--         <div #proof .monospace>
+--           ^{proofState}
+--     <div .ui-layout-east>
+--       <h1 .pane-head>&nbsp;Debug information
+--       <div #debug-wrapper .scroll-wrapper>
+--         <div #ui-debug-display>
+--     <div .ui-layout-center>
+--       <h1 #main-title .pane-head>Visualization display
+--       <div #main-wrapper .scroll-wrapper tabindex=0>
+--         <div #ui-main-display>
+--           \^{mainView}
+--   |]
+
+
+
+
 
 -- | Framing/UI-layout template (based on JavaScript/JQuery)
 overviewDiffTpl :: RenderUrl
