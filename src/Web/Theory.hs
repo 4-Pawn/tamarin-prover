@@ -918,7 +918,7 @@ rulesSnippet thy = vcat
                         | bb <- behaviours ]
 
     renderRule idx rule =
-        let ruleId   = "rule-" ++ show idx
+        let ruleId   = show idx
             formId   = "edit-form-" ++ ruleId
             ruleText = "add new action fact(s) here, separated by a comma"
          in withTag "div"
@@ -934,10 +934,10 @@ rulesSnippet thy = vcat
               , ("style", "display:none; margin-top: 10px;") ]
               (withTag "form"
                [ ("method", "post")
-               , ("action", "/edit/rule/" ++ ruleId)
+               , ("action", "../edit-rule/" ++ ruleId)
                ]
                (withTag "textarea"
-                [ ("name", "action-fact")
+                [ ("name", "action-facts")
                 , ("rows", "3")
                 , ("placeholder", ruleText)
                 , ("style", "width: 50%; font-family: monospace; margin: 0;" )

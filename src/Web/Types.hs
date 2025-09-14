@@ -74,6 +74,7 @@ import Yesod.Static
 import Theory
 import Theory.Tools.Wellformedness (WfErrorReport)
 import Main.TheoryLoader
+import Text.Read (readMaybe)
 
 
 ------------------------------------------------------------------------------
@@ -562,15 +563,16 @@ type RenderUrl = Route WebUI -> T.Text
 
 getStatic :: WebUI -> Static
 getStatic = (.getStatic)
-
+-- /thy/trace/2/edit-rule/0
 -- | Static routing for our application.
 -- Note that handlers ending in R are general handlers,
 -- whereas handlers ending in MR are for the main view
 -- and the ones ending in DR are for the debug view.
 mkYesodData "WebUI" [parseRoutes|
 /                                          RootR                   GET POST
-/thy/trace/#Int/edit/*TheoryPath           TheoryEditR             POST
+/thy/trace/#Int/edit/*TheoryPath           TheoryEditR             POST 
 /thy/trace/#Int/verify/*TheoryPath         TheoryVerifyR           GET
+/thy/trace/#Int/edit-rule/#Int             TheoryActionAddR         POST
 /thy/trace/#Int/overview/*TheoryPath          OverviewR               GET
 /thy/trace/#Int/source                           TheorySourceR           GET
 /thy/trace/#Int/message                          TheoryMessageDeductionR GET

@@ -16,6 +16,7 @@ module Theory.Text.Parser.Rule (
      , protoRule
      , intrRule
      , diffRule
+     , factOrRestr
 )
 where
 

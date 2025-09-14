@@ -12,6 +12,7 @@ Portability :  non-portable
 module Web.Handler
   ( getOverviewR
   , postTheoryEditR
+  , postTheoryActionAddR 
   , getTheoryVerifyR
   , getOverviewDiffR
   , getRootR
@@ -128,7 +129,7 @@ import Network.HTTP.Types (urlDecode)
 import System.Directory
 import System.FilePath ((</>))
 
-import Debug.Trace (trace)
+import Debug.Trace (trace, traceM)
 import Main.TheoryLoader
 import Main.Console (renderDoc)
 import Text.PrettyPrint.Html
@@ -136,10 +137,11 @@ import Text.Read (readMaybe)
 import Theory.Constraint.System.Dot
 import Theory.Constraint.System.Graph.Graph
 import Theory.Constraint.System.JSON  -- for export of constraint system to JSON
-import Theory.Text.Parser (parsePlainLemma)
+import Theory.Text.Parser (parsePlainLemma, parseActionFacts)
 import Theory.Tools.Wellformedness  (prettyWfErrorReport)
 import Lemma
 import Prover (mkSystem)
+import System.IO (hFlush, stdout)
 
 ------------------------------------------------------------------------------
 -- Manipulate the state
@@ -646,6 +648,7 @@ getRootR = do
 newtype File = File T.Text
   deriving Show
 
+
 postRootR :: Handler Html
 postRootR = do
   result <- lookupFile "uploadedTheory"
@@ -727,7 +730,6 @@ postTheoryEditR idx (TheoryDelete l) = do
         Left  e -> do setMessage $ toHtml e
                       redirect (OverviewR idx (TheoryDelete l))
 
-
 postTheoryEditR idx path = do
     mLemmaText <- lookupPostParam "lemma-text"
     let newlptxt = T.unpack $ fromMaybe "" mLemmaText
@@ -754,6 +756,31 @@ postTheoryEditR idx path = do
                       setTitle $ toHtml title
                       setMessage $ toHtml e
                       overview
+
+postTheoryActionAddR :: TheoryIdx -> Int -> Handler Html
+postTheoryActionAddR idx i = do
+    actionText <- lookupPostParam "action-facts"
+    maudeSig <- withTheory idx $ \ti -> pure (toSignaturePure ti.theory._thySignature)._sigMaudeInfo
+    let newAptxt = T.unpack $ fromMaybe "" actionText
+    idx' <- case parseActionFacts maudeSig newAptxt of
+        Left err -> pure $ Left $ show err
+        Right newl -> liftIO $ do
+            putStrLn ("got " ++ show i ++ " " ++ show newl)
+            hFlush stdout
+            pure $ Left $ show newl
+    setMessage $ toHtml ("got " ++ show i)
+    redirect (OverviewR idx TheoryRules)
+
+
+-- postTheoryActionAddR idx i = do
+--     actionText <- lookupPostParam "action-facts"
+--     maudeSig <- withTheory idx $ \ti -> pure (toSignaturePure ti.theory._thySignature)._sigMaudeInfo
+--     let newAptxt = T.unpack $ fromMaybe "" actionText
+--     idx' <- case parseActionFacts maudeSig newAptxt of
+--         Left err -> pure $ Left $ show err
+--         Right newAF -> pure $ Left $ ("got " ++ show i ++ " " ++ show newAF)
+--     setMessage $ toHtml ("got " ++ show i)
+--     redirect (OverviewR idx TheoryRules)
 
 
 -- | Show overview over diff theory (framed layout).

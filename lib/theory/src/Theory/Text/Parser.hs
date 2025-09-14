@@ -18,6 +18,7 @@ module Theory.Text.Parser (
   , parseOpenDiffTheoryString
   , theory
   , diffTheory
+  , parseActionFacts
   , parseLemma
   , parsePlainLemma
   , parseRestriction
@@ -53,6 +54,8 @@ import Theory.Text.Parser.Tactics
 import Theory.Text.Parser.Restriction
 import Theory.Text.Parser.Sapic
 import Debug.Trace
+import Theory.Text.Parser.Fact (fact)
+import Theory.Text.Parser.Term (vlit)
 
 ------------------------------------------------------------------------------
 -- Lexing and parsing theory files and proof methods
@@ -90,6 +93,9 @@ parsePlainLemma :: MaudeSig -> String -> Either ParseError (Lemma ProofSkeleton)
 parsePlainLemma msig = parseStringWState (mkStateSig msig) "<unknown source>" (lemmaWithMsig msig Nothing)
 
 
+-- | Parse a list of comma separated action facts (to add new action facts from GUI)
+parseActionFacts :: MaudeSig -> String -> Either ParseError [Fact (NTerm LVar)]
+parseActionFacts msig = parseStringWState (mkStateSig msig) "<unknown source>" (commaSep (fact (vlit msgvar)))
 
 
 ------------------------------------------------------------------------------
