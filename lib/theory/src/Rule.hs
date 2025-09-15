@@ -186,3 +186,8 @@ containsPartialDeconstructions (ClosedRuleCache _ _ cases _) =
 addActionClosedProtoRule :: ClosedProtoRule -> LNFact -> ClosedProtoRule
 addActionClosedProtoRule (ClosedProtoRule e ac) f
    = ClosedProtoRule e (addAction ac f)
+
+addActionClosedProtoRuleTest :: ClosedProtoRule -> LNFact -> ClosedProtoRule
+addActionClosedProtoRuleTest (ClosedProtoRule e ac) f
+   = ClosedProtoRule (addAction e f) (addAction ac f)
+

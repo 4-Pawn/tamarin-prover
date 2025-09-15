@@ -52,7 +52,7 @@ module Web.Handler
 where
 
 import Theory
-  ( Theory(..), DiffTheory(..), ClosedTheory, ClosedDiffTheory, Side
+  ( Theory(..), DiffTheory(..), ClosedTheory,  ClosedDiffTheory, Side
   , ClosedTheory, ClosedDiffTheory, Side, Signature(..)
   , removeLemma
   , lookupLemmaIndex
@@ -83,7 +83,7 @@ import Theory
   , toSignaturePure
   , checkAndExtendProver
   , theoryRestrictions
-  , Prover (runProver), unproven
+  , Prover (runProver), unproven, addActionFactsAtIndex, Fact, ClosedRuleCache (_crcRules), ClassifiedRules (_crProtocol)
   )
 
 import Theory.Proof
@@ -142,6 +142,7 @@ import Theory.Tools.Wellformedness  (prettyWfErrorReport)
 import Lemma
 import Prover (mkSystem)
 import System.IO (hFlush, stdout)
+import Term.LTerm (NTerm, LVar)
 
 ------------------------------------------------------------------------------
 -- Manipulate the state
@@ -257,6 +258,15 @@ addLemma idx maybelemmaIndex (Lemma n pt _ tq f a lp) = withTheory idx $ \ti -> 
                     case newThy of
                          Nothing -> pure $ Left "lemma editing failed"
                          (Just nthy) -> Right <$> replaceTheory (Just ti) Nothing nthy ("modified" ++ show idx) idx
+
+
+addActionFacts :: Int -> Int -> [Fact (NTerm LVar)] -> Handler (Either String TheoryIdx)
+addActionFacts idx i newf = withTheory idx $ \ti -> do
+    let newThy = addActionFactsAtIndex newf i ti.theory
+    case newThy of
+        Nothing -> pure $ Left "action adding failed" 
+        (Just nthy) ->  Right <$> replaceTheory (Just ti) Nothing nthy ("modified" ++ show idx) idx 
+        --pure $ Left ( show ((_crProtocol . _crcRules . _thyCache) nthy !! i))--
 
 -- | Deletes, adds or modifies a lemma depending on the path
 editLemma :: Int -> TheoryPath -> Lemma ProofSkeleton -> Handler (Either String TheoryIdx)
@@ -757,30 +767,37 @@ postTheoryEditR idx path = do
                       setMessage $ toHtml e
                       overview
 
+
+-- | Add new action fact to rule at index i
 postTheoryActionAddR :: TheoryIdx -> Int -> Handler Html
 postTheoryActionAddR idx i = do
     actionText <- lookupPostParam "action-facts"
     maudeSig <- withTheory idx $ \ti -> pure (toSignaturePure ti.theory._thySignature)._sigMaudeInfo
+    renderParamsF <- getUrlRenderParams
     let newAptxt = T.unpack $ fromMaybe "" actionText
     idx' <- case parseActionFacts maudeSig newAptxt of
         Left err -> pure $ Left $ show err
-        Right newl -> liftIO $ do
-            putStrLn ("got " ++ show i ++ " " ++ show newl)
-            hFlush stdout
-            pure $ Left $ show newl
-    setMessage $ toHtml ("got " ++ show i)
-    redirect (OverviewR idx TheoryRules)
+        Right newf -> addActionFacts idx i newf
+    case idx' of
+        Right newi -> do redirect (OverviewR newi TheoryRules)
+        Left e -> withTheory idx $ \ti -> do
+                    renderF <- getUrlRender
+                    let title = titleThyPath ti.theory TheoryRules
+                    defaultLayout $ do
+                      getParams <- reqGetParams <$> getRequest
+                      let renderParamsF' route = renderParamsF route getParams
+                      overview <- liftIO $ overviewTpl renderF renderParamsF' ti TheoryRules ""
+                      setTitle $ toHtml title
+                      setMessage $ toHtml e
+                      overview
 
-
--- postTheoryActionAddR idx i = do
---     actionText <- lookupPostParam "action-facts"
---     maudeSig <- withTheory idx $ \ti -> pure (toSignaturePure ti.theory._thySignature)._sigMaudeInfo
---     let newAptxt = T.unpack $ fromMaybe "" actionText
---     idx' <- case parseActionFacts maudeSig newAptxt of
---         Left err -> pure $ Left $ show err
---         Right newAF -> pure $ Left $ ("got " ++ show i ++ " " ++ show newAF)
---     setMessage $ toHtml ("got " ++ show i)
---     redirect (OverviewR idx TheoryRules)
+        -- Right newf -> liftIO $ do
+        --     putStrLn ("got " ++ show i ++ " " ++ show newf)
+        --     hFlush stdout
+        --     -- addActionFactsAtIndex newf i ti.theory
+        --     pure $ Left $ show newf
+    -- setMessage $ toHtml ("got " ++ show i)
+    -- redirect (OverviewR idx TheoryRules)
 
 
 -- | Show overview over diff theory (framed layout).

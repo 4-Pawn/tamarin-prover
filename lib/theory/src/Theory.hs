@@ -137,6 +137,7 @@ module Theory (
   , addRestriction
   , addLemma
   , addLemmaAtIndex
+  , addActionFactsAtIndex
   , modifyLemma
   , addAccLemma
   , addCaseTest
