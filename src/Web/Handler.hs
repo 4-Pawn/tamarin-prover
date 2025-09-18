@@ -264,7 +264,7 @@ addActionFacts :: Int -> Int -> [Fact (NTerm LVar)] -> Handler (Either String T
 addActionFacts idx i newf = withTheory idx $ \ti -> do
     let newThy = addActionFactsAtIndex newf i ti.theory
     case newThy of
-        Nothing -> pure $ Left "action adding failed" 
+        Nothing -> pure $ Left "Can't add action facts that already appear in lemmas" 
         (Just nthy) ->  Right <$> replaceTheory (Just ti) Nothing nthy ("modified" ++ show idx) idx 
         --pure $ Left ( show ((_crProtocol . _crcRules . _thyCache) nthy !! i))--
 
