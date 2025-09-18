@@ -466,25 +466,23 @@ addLemmaAtIndex l i thy = do
 addActionFactsAtIndex :: [Fact (NTerm LVar)] -> Int -> Theory sig ClosedRuleCache ClosedProtoRule p s -> Maybe (Theory sig ClosedRuleCache ClosedProtoRule p s) 
 addActionFactsAtIndex f i thy = do
     oldRule <-  atMay (theoryRules thy) i
+    let tags = map factTag f
+    guard . null $ filter (\lem -> any (`hasFactWithTag` L.get lFormula lem) tags) (theoryLemmas thy) 
     let nr = foldl addActionClosedProtoRule oldRule f
         mrule (RuleItem item) 
             | item == oldRule = RuleItem nr
             | otherwise = RuleItem item
         mrule item  = item
-    --return $ modify thyItems (map mrule) thy
         nthy = modify thyItems (map mrule) thy
         (Theory nm fl th tt ts tc ti to tis) = nthy
         (ClosedRuleCache crc craw cref ci) = tc
         (ClassifiedRules crP crD crC) = crc
     old_crP_rule <- atMay crP i
     let new_crP_rule = foldl addAction old_crP_rule f
-        new_crP = (take (i) crP) ++ [new_crP_rule] ++ (drop (i+1) crP)
-    --r <- atMay (L.get (crProtocol . crcRules ) tc) i
-    (trace (show new_crP)) $ return (Theory nm fl th tt ts (ClosedRuleCache (ClassifiedRules new_crP crD crC) craw cref ci) ti to tis)
+        new_crP = (take i crP) ++ [new_crP_rule] ++ (drop (i+1) crP)
 
-    -- trace(show (ClosedProtoRule r1 r2) ++ "\n at index" ++ (show ruleIndex)++ "\n" ++ (show nr)) (return $ modify thyItems (\ls -> (take (ruleIndex-1) ls) ++ [RuleItem nr] ++ (drop ruleIndex ls)) thy)
-    --    ruleIndex <- lookupActionFactIndex oldRule thy
-    --let af = L.get rActs r1
+    return (Theory nm fl th tt ts (ClosedRuleCache (ClassifiedRules new_crP crD crC) craw cref ci) ti to tis)
+
 
 
 -- | apply function on lemmas, temporary test
@@ -494,20 +492,6 @@ modifyLemma f thy = do
   where
     mlemma (LemmaItem l) = (LemmaItem (f l))
     mlemma i = i
-
-
-
--- addActionFacttoRuleIndex :: Fact (NTerm LVar) -> Int -> Theory sig c r p s -> Maybe (Theory sig c r p s)
--- addActionFacttoRuleIndex f i thy = do
---   guard (not any (f `elem`) $ map (L.get rActs) theoryRules)
---   let items = theoryRules
---   case splitAt i items of
---     (before, after) ->
---       let updatedRule = L.set rActs (L.get rActs r ++ [f]) r
---           newItems = before ++ [RuleItem updatedRule] ++ after
---        in Just $ set thyItems newItems thy
---     _ -> Nothing 
-
 
 
 -- | Add a new process expression.  Since expression (and not definitions)

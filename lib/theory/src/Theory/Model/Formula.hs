@@ -57,6 +57,7 @@ module Theory.Model.Formula (
   , mapAtoms
   , foldFormula
   , traverseFormulaAtom
+  , hasFactWithTag
 
   -- ** Normal forms / simplification
   , simplifyFormula
@@ -93,6 +94,7 @@ import           Theory.Text.Pretty
 
 import           Term.LTerm
 import           Term.Substitution
+import Theory.Model.Fact (Fact(factTag), FactTag)
 
 ------------------------------------------------------------------------------
 -- Types
@@ -263,6 +265,17 @@ mapAtoms :: (Integer -> ProtoAtom syn (VTerm c (BVar v))
          -> ProtoAtom syn1 (VTerm c1 (BVar v1)))
          -> ProtoFormula syn s c v -> ProtoFormula syn1 s c1 v1
 mapAtoms f = foldFormulaScope (\i a -> Ato $ f i a) TF Not Conn Qua
+
+
+hasFactWithTag :: FactTag -> ProtoFormula syn s c v -> Bool
+hasFactWithTag targetTag = go
+  where
+    go (Ato (Action _ fact)) = factTag fact == targetTag
+    go (Not f)               = go f
+    go (Conn _ f1 f2)        = go f1 || go f2
+    go (Qua _ _ f)           = go f
+    go _                     = False
+
 
 -- | @openFormula f@ returns @Just (v,Q,f')@ if @f = Q v. f'@ modulo
 -- alpha renaming and @Nothing otherwise@. @v@ is always chosen to be fresh.
